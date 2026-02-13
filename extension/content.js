@@ -1,41 +1,46 @@
 "use strict";
 
+const MESSAGE_TYPES = {
+    PING: "PING"
+};
+
 console.log("[ESG Content] Script active");
 
-/**
- * Responds to popup communication.
- */
+/*
+Handles popup → content → background routing
+*/
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     if (!message?.type) return;
 
     switch (message.type) {
 
-        case "PING":
-            sendResponse({ status: "Content Script Alive" });
-            break;
+        case MESSAGE_TYPES.PING:
+
+            chrome.runtime.sendMessage(
+                { type: MESSAGE_TYPES.PING },
+                (response) => {
+
+                    if (chrome.runtime.lastError) {
+                        console.error("[ESG Content] Background error:", chrome.runtime.lastError);
+                        sendResponse({ error: true });
+                        return;
+                    }
+
+                    sendResponse(response);
+                }
+            );
+
+            return true;
 
         default:
             console.warn("[ESG Content] Unknown message:", message.type);
     }
-
 });
 
-/**
- * Initial handshake with background script.
- */
-function notifyBackground() {
-
-    chrome.runtime.sendMessage({ type: "PING" }, (response) => {
-
-        if (chrome.runtime.lastError) {
-            console.error("[ESG Content] Background error:", chrome.runtime.lastError);
-            return;
-        }
-
-        console.log("[ESG Content] Background response:", response);
-    });
-
-}
-
-notifyBackground();
+/*
+Initial handshake
+*/
+chrome.runtime.sendMessage({ type: MESSAGE_TYPES.PING }, (response) => {
+    console.log("[ESG Content] Background response:", response);
+});
