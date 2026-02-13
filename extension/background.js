@@ -1,9 +1,5 @@
 "use strict";
 
-const MESSAGE_TYPES = {
-    PING: "PING"
-};
-
 console.log("[ESG Background] Service worker started");
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -12,8 +8,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     switch (message.type) {
 
-        case MESSAGE_TYPES.PING:
+        case "PING":
             sendResponse({ status: "Background Alive" });
+            break;
+
+        case "EMAIL_DETECTED":
+            console.log("[ESG Background] Email received:", message.payload);
             break;
 
         default:

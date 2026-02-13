@@ -1,46 +1,63 @@
 "use strict";
 
-const MESSAGE_TYPES = {
-    PING: "PING"
-};
-
 console.log("[ESG Content] Script active");
 
-/*
-Handles popup → content → background routing
-*/
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+if (!window.MESSAGE_TYPES) {
+    console.error("[ESG] MESSAGE_TYPES not loaded.");
+}
 
-    if (!message?.type) return;
+let lastEmailSignature = null;
 
-    switch (message.type) {
+async function detectEmailView() {
 
-        case MESSAGE_TYPES.PING:
+    const emailContainer = document.querySelector("div.a3s");
 
-            chrome.runtime.sendMessage(
-                { type: MESSAGE_TYPES.PING },
-                (response) => {
+    if (!emailContainer) return;
 
-                    if (chrome.runtime.lastError) {
-                        console.error("[ESG Content] Background error:", chrome.runtime.lastError);
-                        sendResponse({ error: true });
-                        return;
-                    }
+    const emailData = window.extractEmailData();
 
-                    sendResponse(response);
-                }
-            );
+    if (!emailData.subject && !emailData.senderEmail) return;
 
-            return true;
+    const signature = emailData.subject + "|" + emailData.senderEmail;
 
-        default:
-            console.warn("[ESG Content] Unknown message:", message.type);
+    if (signature === lastEmailSignature) return;
+
+    lastEmailSignature = signature;
+
+    console.log("[ESG] New email detected");
+
+    const emailHash = await window.generateEmailHash(emailData);
+
+    console.log("[ESG] Email Hash:", emailHash);
+
+    chrome.runtime.sendMessage({
+        type: window.MESSAGE_TYPES.EMAIL_DETECTED,
+        payload: {
+            email_hash: emailHash,
+            ...emailData
+        }
+    });
+}
+
+function startObserver() {
+
+    const observer = new MutationObserver(() => {
+        detectEmailView();
+    });
+
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+
+    console.log("[ESG] Gmail observer started");
+}
+
+startObserver();
+
+chrome.runtime.sendMessage(
+    { type: window.MESSAGE_TYPES.PING },
+    (response) => {
+        console.log("[ESG] Background response:", response);
     }
-});
-
-/*
-Initial handshake
-*/
-chrome.runtime.sendMessage({ type: MESSAGE_TYPES.PING }, (response) => {
-    console.log("[ESG Content] Background response:", response);
-});
+);
