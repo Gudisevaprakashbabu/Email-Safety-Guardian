@@ -1,23 +1,21 @@
 "use strict";
 
-/*
-Basic Gmail email extraction utilities
-*/
+window.ESGExtractor = {
 
-(function () {
+    extract() {
 
-    function extractEmailData() {
+        const subject =
+            document.querySelector("h2")?.innerText || "";
 
-        const subjectElement = document.querySelector("h2.hP");
-        const senderElement = document.querySelector(".gD");
-        const bodyElement = document.querySelector("div.a3s");
+        const senderEmail =
+            document.querySelector("span[email]")?.getAttribute("email") || "";
 
-        const subject = subjectElement ? subjectElement.innerText.trim() : "";
-        const senderEmail = senderElement ? senderElement.getAttribute("email") : "";
-        const bodyText = bodyElement ? bodyElement.innerText.trim() : "";
+        const bodyText =
+            document.querySelector("div[role='listitem']")?.innerText || "";
 
-        const links = Array.from(document.querySelectorAll("div.a3s a"))
-            .map(a => a.href);
+        const links = Array.from(document.querySelectorAll("a"))
+            .map(a => a.href)
+            .filter(Boolean);
 
         return {
             subject,
@@ -26,10 +24,4 @@ Basic Gmail email extraction utilities
             links
         };
     }
-
-    /*
-    Expose globally
-    */
-    window.extractEmailData = extractEmailData;
-
-})();
+};

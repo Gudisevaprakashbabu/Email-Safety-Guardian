@@ -20,17 +20,19 @@
   },
 
   "content_scripts": [
-  {
-    "matches": ["https://mail.google.com/*"],
-    "js": [
-      "utils/messageTypes.js",
-      "utils/gmailExtractor.js",
-      "utils/hashGenerator.js",
-      "content.js"
-    ],
-    "run_at": "document_idle"
-  }
-],
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": [
+        "utils/messageTypes.js",
+        "utils/hashGenerator.js",
+        "utils/gmailExtractor.js",
+        "utils/signalDetector.js",
+        "utils/localRiskEngine.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
 
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

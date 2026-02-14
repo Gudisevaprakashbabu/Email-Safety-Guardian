@@ -1,37 +1,16 @@
 "use strict";
 
-/*
-Email Hash Generator
-Privacy-safe identity creation
-Uses:
-sender_email + subject + first_500_chars_of_body
-*/
+window.ESGHash = {
 
-(function () {
+    async generate(emailData) {
 
-    async function generateEmailHash(emailData) {
-
-        if (!emailData) return null;
-
-        const sender = emailData.senderEmail || "";
-        const subject = emailData.subject || "";
-        const bodySnippet = (emailData.bodyText || "").substring(0, 500);
-
-        const combinedString = sender + subject + bodySnippet;
-
+        const raw = `${emailData.subject}|${emailData.senderEmail}|${emailData.bodyText}`;
         const encoder = new TextEncoder();
-        const data = encoder.encode(combinedString);
+        const data = encoder.encode(raw);
 
         const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-
         const hashArray = Array.from(new Uint8Array(hashBuffer));
-        const hashHex = hashArray
-            .map(b => b.toString(16).padStart(2, "0"))
-            .join("");
 
-        return hashHex;
+        return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
     }
-
-    window.generateEmailHash = generateEmailHash;
-
-})();
+};

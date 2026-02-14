@@ -2,47 +2,38 @@
 
 console.log("[ESG Content] Script active");
 
-if (!window.MESSAGE_TYPES) {
-    console.error("[ESG] MESSAGE_TYPES not loaded.");
-}
+chrome.runtime.sendMessage({ type: window.MESSAGE_TYPES.PING }, (response) => {
+    console.log("[ESG] Background response:", response);
+});
 
-let lastEmailSignature = null;
+let lastProcessedHash = null;
 
-async function detectEmailView() {
+async function processEmail() {
 
-    const emailContainer = document.querySelector("div.a3s");
+    const emailData = window.ESGExtractor.extract();
 
-    if (!emailContainer) return;
+    if (!emailData.subject && !emailData.bodyText) return;
 
-    const emailData = window.extractEmailData();
+    const emailHash = await window.ESGHash.generate(emailData);
 
-    if (!emailData.subject && !emailData.senderEmail) return;
+    if (emailHash === lastProcessedHash) return;
 
-    const signature = emailData.subject + "|" + emailData.senderEmail;
-
-    if (signature === lastEmailSignature) return;
-
-    lastEmailSignature = signature;
+    lastProcessedHash = emailHash;
 
     console.log("[ESG] New email detected");
-
-    const emailHash = await window.generateEmailHash(emailData);
-
     console.log("[ESG] Email Hash:", emailHash);
 
-    chrome.runtime.sendMessage({
-        type: window.MESSAGE_TYPES.EMAIL_DETECTED,
-        payload: {
-            email_hash: emailHash,
-            ...emailData
-        }
-    });
+    const signals = window.ESGSignals.detect(emailData);
+    console.log("[ESG] Signals:", signals);
+
+    const risk = window.ESGRiskEngine.evaluate(signals);
+    console.log("[ESG] Risk:", risk);
 }
 
-function startObserver() {
+function observeGmail() {
 
     const observer = new MutationObserver(() => {
-        detectEmailView();
+        processEmail();
     });
 
     observer.observe(document.body, {
@@ -53,11 +44,4 @@ function startObserver() {
     console.log("[ESG] Gmail observer started");
 }
 
-startObserver();
-
-chrome.runtime.sendMessage(
-    { type: window.MESSAGE_TYPES.PING },
-    (response) => {
-        console.log("[ESG] Background response:", response);
-    }
-);
+observeGmail();
