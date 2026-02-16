@@ -1,27 +1,28 @@
 "use strict";
 
 window.ESGExtractor = {
+  extract() {
+    const subject =
+      document.querySelector("h2")?.innerText?.trim() || "";
 
-    extract() {
+    const senderEmail =
+      document.querySelector("span[email]")?.getAttribute("email") || "";
 
-        const subject =
-            document.querySelector("h2")?.innerText || "";
+    const bodyContainer =
+      document.querySelector("div[role='listitem']");
 
-        const senderEmail =
-            document.querySelector("span[email]")?.getAttribute("email") || "";
+    const bodyText =
+      bodyContainer?.innerText?.trim() || "";
 
-        const bodyText =
-            document.querySelector("div[role='listitem']")?.innerText || "";
+    const links = Array.from(document.querySelectorAll("a"))
+      .map(a => a.href)
+      .filter(Boolean);
 
-        const links = Array.from(document.querySelectorAll("a"))
-            .map(a => a.href)
-            .filter(Boolean);
-
-        return {
-            subject,
-            senderEmail,
-            bodyText,
-            links
-        };
-    }
+    return {
+      subject,
+      senderEmail,
+      bodyText,
+      links
+    };
+  }
 };

@@ -1,40 +1,24 @@
 {
   "manifest_version": 3,
-  "name": "Email Safety Guardian",
+  "name": "Email Security Guardian",
   "version": "1.0",
-  "description": "Explainable Scam Reasoning Assistant with Privacy-First Design.",
-
-  "permissions": ["storage", "activeTab", "scripting"],
-
+  "description": "Scan Gmail for spam and phishing signals",
+  "permissions": [
+    "storage"
+  ],
   "host_permissions": [
     "https://mail.google.com/*"
   ],
-
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "background.js",
+    "type": "module"
   },
-
-  "action": {
-    "default_popup": "popup.html",
-    "default_title": "Email Safety Guardian"
-  },
-
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
-      "js": [
-        "utils/messageTypes.js",
-        "utils/hashGenerator.js",
-        "utils/gmailExtractor.js",
-        "utils/signalDetector.js",
-        "utils/localRiskEngine.js",
-        "content.js"
-      ],
+      
+      "js": ["content.js"],
       "run_at": "document_idle"
     }
-  ],
-
-  "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'"
-  }
+  ]
 }

@@ -1,82 +1,75 @@
 "use strict";
 
-window.ESGSignals = {
+window.ESGSignalDetector = {
+  detect(extracted) {
+    const { subject, senderEmail, bodyText, links } = extracted;
 
-    detect(emailData) {
+    const freeEmailDomains = [
+      "gmail.com", "yahoo.com", "outlook.com"
+    ];
 
-        const signals = {
-            has_shortened_link: false,
-            suspicious_tld_detected: false,
-            excessive_links_detected: false,
-            link_text_mismatch: false,
-            free_email_sender: false,
-            urgency_detected: false,
-            fear_tactic_detected: false,
-            authority_pressure_detected: false,
-            reward_bait_detected: false,
-            suspicious_domain_pattern: false
-        };
+    const suspiciousTLDs = [".xyz", ".top", ".click", ".ru"];
 
-        const shortenedDomains = [
-            "bit.ly", "tinyurl.com", "t.co", "goo.gl", "rebrand.ly"
-        ];
+    const shortenedDomains = [
+      "bit.ly", "tinyurl.com", "goo.gl"
+    ];
 
-        const suspiciousTlds = [
-            ".xyz", ".top", ".click", ".ru", ".tk"
-        ];
+    const urgencyKeywords = [
+      "urgent", "immediately", "expire", "suspended"
+    ];
 
-        const freeEmailDomains = [
-            "@gmail.com", "@yahoo.com", "@outlook.com"
-        ];
+    const rewardKeywords = [
+      "reward", "win", "prize", "claim"
+    ];
 
-        if (emailData.links.length > 10) {
-            signals.excessive_links_detected = true;
-        }
+    const authorityKeywords = [
+      "government", "official", "legal", "compliance"
+    ];
 
-        emailData.links.forEach(link => {
+    const signals = {
+      free_email_sender: false,
+      suspicious_tld_detected: false,
+      has_shortened_link: false,
+      urgency_detected: false,
+      reward_bait_detected: false,
+      authority_pressure_detected: false,
+      excessive_links_detected: false
+    };
 
-            shortenedDomains.forEach(domain => {
-                if (link.includes(domain)) {
-                    signals.has_shortened_link = true;
-                }
-            });
-
-            suspiciousTlds.forEach(tld => {
-                if (link.includes(tld)) {
-                    signals.suspicious_tld_detected = true;
-                }
-            });
-        });
-
-        freeEmailDomains.forEach(domain => {
-            if (emailData.senderEmail.includes(domain)) {
-                signals.free_email_sender = true;
-            }
-        });
-
-        const body = emailData.bodyText.toLowerCase();
-
-        if (body.includes("urgent") || body.includes("immediately")) {
-            signals.urgency_detected = true;
-        }
-
-        if (body.includes("account suspended") || body.includes("verify now")) {
-            signals.fear_tactic_detected = true;
-        }
-
-        if (body.includes("ceo") || body.includes("legal notice")) {
-            signals.authority_pressure_detected = true;
-        }
-
-        if (body.includes("reward") || body.includes("won") || body.includes("gift")) {
-            signals.reward_bait_detected = true;
-        }
-
-        if (emailData.senderEmail.includes("secure-login") ||
-            emailData.senderEmail.includes("verify-account")) {
-            signals.suspicious_domain_pattern = true;
-        }
-
-        return signals;
+    if (senderEmail) {
+      const domain = senderEmail.split("@")[1];
+      if (freeEmailDomains.includes(domain)) {
+        signals.free_email_sender = true;
+      }
     }
+
+    for (const link of links) {
+      if (suspiciousTLDs.some(tld => link.includes(tld))) {
+        signals.suspicious_tld_detected = true;
+      }
+      if (shortenedDomains.some(sd => link.includes(sd))) {
+        signals.has_shortened_link = true;
+      }
+    }
+
+    const combinedText = (subject + " " + bodyText).toLowerCase();
+
+    if (urgencyKeywords.some(k => combinedText.includes(k))) {
+      signals.urgency_detected = true;
+    }
+
+    if (rewardKeywords.some(k => combinedText.includes(k))) {
+      signals.reward_bait_detected = true;
+    }
+
+    if (authorityKeywords.some(k => combinedText.includes(k))) {
+      signals.authority_pressure_detected = true;
+    }
+
+    if (links.length > 10) {
+      signals.excessive_links_detected = true;
+    }
+
+    return signals;
+  }
 };

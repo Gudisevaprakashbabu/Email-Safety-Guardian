@@ -1,47 +1,107 @@
-"use strict";
+(function () {
+    if (window.__ESG_CONTENT_LOADED__) {
+        return;
+    }
+    window.__ESG_CONTENT_LOADED__ = true;
 
-console.log("[ESG Content] Script active");
+    console.log("[ESG] Content script active");
 
-chrome.runtime.sendMessage({ type: window.MESSAGE_TYPES.PING }, (response) => {
-    console.log("[ESG] Background response:", response);
-});
+    const processedMessageIds = new Set();
+    let observerStarted = false;
 
-let lastProcessedHash = null;
+    function isExtensionContextValid() {
+        return typeof chrome !== "undefined" &&
+               chrome.runtime &&
+               typeof chrome.runtime.sendMessage === "function";
+    }
 
-async function processEmail() {
+    function getMessageIdFromURL() {
+        const match = window.location.href.match(/#.*?\/([^/?]+)/);
+        return match ? match[1] : null;
+    }
 
-    const emailData = window.ESGExtractor.extract();
+    function extractEmailData() {
+        const subjectEl = document.querySelector("h2");
+        const fromEl = document.querySelector(".gD");
 
-    if (!emailData.subject && !emailData.bodyText) return;
+        if (!subjectEl || !fromEl) return null;
 
-    const emailHash = await window.ESGHash.generate(emailData);
+        return {
+            subject: subjectEl.innerText || "",
+            from: fromEl.getAttribute("email") || "",
+            body: document.body.innerText || ""
+        };
+    }
 
-    if (emailHash === lastProcessedHash) return;
+    function processEmailIfNew() {
+        try {
+            const messageId = getMessageIdFromURL();
+            if (!messageId) return;
 
-    lastProcessedHash = emailHash;
+            if (processedMessageIds.has(messageId)) {
+                return;
+            }
 
-    console.log("[ESG] New email detected");
-    console.log("[ESG] Email Hash:", emailHash);
+            const emailData = extractEmailData();
+            if (!emailData || (!emailData.subject && !emailData.from)) {
+                return;
+            }
 
-    const signals = window.ESGSignals.detect(emailData);
-    console.log("[ESG] Signals:", signals);
+            processedMessageIds.add(messageId);
 
-    const risk = window.ESGRiskEngine.evaluate(signals);
-    console.log("[ESG] Risk:", risk);
-}
+            console.log("[ESG] New email detected");
+            console.log("[ESG] Message ID:", messageId);
 
-function observeGmail() {
+            if (!isExtensionContextValid()) {
+                console.warn("[ESG] Extension context invalid. Skipping sendMessage.");
+                return;
+            }
 
-    const observer = new MutationObserver(() => {
-        processEmail();
+            chrome.runtime.sendMessage(
+                {
+                    type: "analyzeEmail",
+                    emailData,
+                    messageId
+                },
+                (response) => {
+                    if (chrome.runtime.lastError) {
+                        console.warn("[ESG] Background not reachable:", chrome.runtime.lastError.message);
+                        return;
+                    }
+
+                    console.log("[ESG] Background response:", response);
+                }
+            );
+
+        } catch (err) {
+            console.error("[ESG] Fatal processing error:", err);
+        }
+    }
+
+    function monitorURLChange() {
+        let lastUrl = location.href;
+
+        new MutationObserver(() => {
+            const currentUrl = location.href;
+            if (currentUrl !== lastUrl) {
+                lastUrl = currentUrl;
+                processEmailIfNew();
+            }
+        }).observe(document.body, { childList: true, subtree: true });
+    }
+
+    function startObserver() {
+        if (observerStarted) return;
+        observerStarted = true;
+
+        console.log("[ESG] Gmail observer started");
+
+        monitorURLChange();
+        processEmailIfNew();
+    }
+
+    window.addEventListener("load", () => {
+        startObserver();
     });
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true
-    });
-
-    console.log("[ESG] Gmail observer started");
-}
-
-observeGmail();
+})();
